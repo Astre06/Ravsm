@@ -7,6 +7,7 @@ from telegram.ext import (
 )
 import threading
 import time
+from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -168,15 +169,7 @@ def run_selenium(server_num, range_start, range_end, bot, chat_id, loop):
         except Exception as e:
             print(f"Error in iteration for seq_num {seq_num}: {e}")
             seq_num += 1
-    print("Job done. Browser will stay open waiting for new commands...")
-
-    # Wait without closing the browser
-    try:
-        while True:
-            time.sleep(10)  # or implement actual waiting for commands
-    except KeyboardInterrupt:
-        print("Exiting and closing browser")
-        driver.quit()
+    driver.quit()
 
     # Send the output.txt file asynchronously in the bot's event loop
     try:
@@ -246,4 +239,3 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 
 app.run_polling()
-
