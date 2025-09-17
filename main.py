@@ -18,6 +18,15 @@ async def run_playwright(server_num, range_start, range_end, bot, chat_id, loop)
         browser = await p.chromium.launch(headless=True)  # Use headless for servers
         context = await browser.new_context()
         page = await context.new_page()
+        proxy_address = "http://157.180.121.252:55574"
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                proxy={"server": proxy_address}
+            )
+            context = await browser.new_context()
+            page = await context.new_page()
 
         await page.goto("https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F")
         await page.fill('input[name="email"]', "oops-mud-handclasp@duck.com")
@@ -127,3 +136,4 @@ conv_handler = ConversationHandler(
 
 app.add_handler(conv_handler)
 app.run_polling()
+
