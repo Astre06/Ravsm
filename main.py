@@ -7,180 +7,170 @@ from telegram.ext import (
 )
 import threading
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 TOKEN = "8017025108:AAEN8QkEB66iJxAl3TtA89axtImXL5dETSs"
 CHAT_ID = 6679042143
-
 SERVER, RANGE = range(2)
 
-chrome_driver_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chromedriver.exe")
+def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)  # Set to True for headless on VPS
+        context = browser.new_context()
+        page = context.new_page()
 
-def run_selenium(server_num, range_start, range_end, bot, chat_id, loop):
-    options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')  # Uncomment for VPS headless mode
-    service = Service(chrome_driver_path)
-    driver = webdriver.Chrome(service=service, options=options)
-    url = "https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F"
-    email = "oops-mud-handclasp@duck.com"
-    password = "Neljane143"
-    
-    with open('output.txt', 'w', encoding='utf-8') as f:
-        f.write('')  # Clear previous content
+        url = "https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F"
+        email = "oops-mud-handclasp@duck.com"
+        password = "Neljane143"
 
-    try:
-        driver.get(url)
-    except Exception as e:
-        print(f"Failed to load URL: {e}")
+        # Clear or create output file
+        with open('output.txt', 'w', encoding='utf-8') as f:
+            f.write('')
 
-    try:
-        email_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.NAME, "email"))
-        )
-        email_input.clear()
-        email_input.send_keys(email)
-    except Exception as e:
-        print(f"Email input not found: {e}")
-
-    try:
-        password_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.NAME, "password"))
-        )
-        password_input.clear()
-        password_input.send_keys(password)
-        password_input.send_keys(Keys.RETURN)
-    except Exception as e:
-        print(f"Password input error: {e}")
-
-    try:
-        login_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.CLASS_NAME, "button_primary_mod"))
-        )
-        login_button.click()
-    except Exception as e:
-        print(f"Login button error: {e}")
-
-    try:
-        full_access_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Full Access')]"))
-        )
-        full_access_button.click()
-    except Exception as e:
-        print(f"Full Access button error: {e}")
-
-    # Initial run with default seq_num = 1 and user-defined server_num
-    seq_num = 1
-    try:
-        create_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'sm:block') and text()='Create']"))
-        )
-        create_button.click()
-        google_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Google']"))
-        )
-        google_button.click()
-        sequential_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Sequential']"))
-        )
-        sequential_button.click()
-        time.sleep(0.5)
-        seq_number_input = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.XPATH, "//input[@type='number']"))
-        )
-        seq_number_input.click()
-        seq_number_input.send_keys(Keys.CONTROL + 'a')
-        seq_number_input.send_keys(str(seq_num))
-        real_acc_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Real Account']"))
-        )
-        real_acc_button.click()
-        server_dropdown = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//select"))
-        )
-        server_dropdown.click()
-        option_xpath = f"//option[@value='{server_num}']"
-        option = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, option_xpath))
-        )
-        option.click()
-        time.sleep(10)
-        generate_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Generate')]"))
-        )
-        generate_button.click()
-        WebDriverWait(driver, 5).until(
-            EC.visibility_of_element_located((By.XPATH, "//div[contains(text(), '@gmail.com')]"))
-        )
-        print(f"Generated batch with sequential number {seq_num}")
-    except Exception as e:
-        print(f"Error during first generation: {e}")
-
-    # Continue with user range
-    seq_num = range_start
-    max_seq = range_end
-    while seq_num <= max_seq:
         try:
-            create_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'sm:block') and text()='Create']"))
-            )
-            create_button.click()
-            seq_number_input = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//input[@type='number']"))
-            )
-            seq_number_input.click()
-            seq_number_input.send_keys(Keys.CONTROL + 'a')
-            seq_number_input.send_keys(str(seq_num))
-            generate_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Generate')]"))
-            )
-            generate_button.click()
-            time.sleep(5)
-            email_text_elem = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]"))
-            )
-            email_address = email_text_elem.text.strip()
-            with open('output.txt', 'a', encoding='utf-8') as f:
-                f.write(email_address + '\n')
-            print(f"Extracted email {email_address} saved for sequential number {seq_num}")
-            while True:
-                try:
-                    trash_buttons = driver.find_elements(By.XPATH, "//button[contains(@class, 'bg-red-400') and contains(@class, 'rounded-full')]")
-                    if not trash_buttons:
-                        break
-                    driver.execute_script("arguments[0].click();", trash_buttons[0])
-                    time.sleep(1)
-                    modal_delete_btn = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'bg-red-500') and text()='Delete']"))
-                    )
-                    modal_delete_btn.click()
-                    time.sleep(1)
-                except StaleElementReferenceException:
-                    time.sleep(1)
-                    continue
-                except TimeoutException:
-                    break
-            seq_num += 1
-        except Exception as e:
-            print(f"Error in iteration for seq_num {seq_num}: {e}")
-            seq_num += 1
-    driver.quit()
+            # Navigate to login page
+            page.goto(url)
 
-    # Send the output.txt file asynchronously in the bot's event loop
-    try:
-        with open('output.txt', 'rb') as f:
-            future = asyncio.run_coroutine_threadsafe(
-                bot.send_document(chat_id=chat_id, document=f),
-                loop
-            )
-            future.result()  # Wait for completion and raise exceptions if any
-    except Exception as e:
-        print(f"Failed to send output.txt automatically: {e}")
+            # Fill email input
+            try:
+                page.wait_for_selector('input[name="email"]', timeout=10000)
+                page.fill('input[name="email"]', email)
+            except PlaywrightTimeoutError:
+                print("Email input not found within timeout")
+
+            # Fill password input and submit
+            try:
+                page.wait_for_selector('input[name="password"]', timeout=10000)
+                page.fill('input[name="password"]', password)
+                page.keyboard.press('Enter')
+            except PlaywrightTimeoutError:
+                print("Password input not found within timeout")
+
+            # Click login button
+            try:
+                page.wait_for_selector('.button_primary_mod', timeout=5000)
+                page.click('.button_primary_mod')
+            except PlaywrightTimeoutError:
+                print("Login button not found or not clickable")
+
+            # Click 'Full Access' button
+            try:
+                page.wait_for_selector("//button[contains(., 'Full Access')]", timeout=10000)
+                page.click("//button[contains(., 'Full Access')]")
+            except PlaywrightTimeoutError:
+                print("Full Access button not found or not clickable")
+
+            # Initial batch generation with seq_num=1
+            seq_num = 1
+
+            try:
+                # Click 'Create' button
+                page.wait_for_selector("//div[contains(@class, 'sm:block') and text()='Create']", timeout=5000)
+                page.click("//div[contains(@class, 'sm:block') and text()='Create']")
+
+                # Click 'Google'
+                page.wait_for_selector("//span[text()='Google']", timeout=5000)
+                page.click("//span[text()='Google']")
+
+                # Click 'Sequential'
+                page.wait_for_selector("//span[text()='Sequential']", timeout=5000)
+                page.click("//span[text()='Sequential']")
+                time.sleep(0.5)
+
+                # Input sequential number '1'
+                page.wait_for_selector("//input[@type='number']", timeout=5000)
+                seq_input = page.locator("//input[@type='number']")
+                seq_input.click()
+                seq_input.fill(str(seq_num))
+
+                # Click 'Real Account'
+                page.wait_for_selector("//span[text()='Real Account']", timeout=5000)
+                page.click("//span[text()='Real Account']")
+
+                # Select server dropdown and option
+                page.wait_for_selector("//select", timeout=5000)
+                page.select_option("select", str(server_num))
+
+                time.sleep(10)  # Wait for server processing or page updates
+
+                # Click 'Generate' button
+                page.wait_for_selector("//button[contains(., 'Generate')]", timeout=5000)
+                page.click("//button[contains(., 'Generate')]")
+
+                # Wait for email with '@gmail.com' to appear
+                page.wait_for_selector("//div[contains(text(), '@gmail.com')]", timeout=5000)
+
+                print(f"Generated batch with sequential number {seq_num}")
+            except PlaywrightTimeoutError as e:
+                print(f"Error during first generation: {e}")
+
+            # Continue generating for user-defined range from range_start to range_end
+            seq_num = range_start
+            max_seq = range_end
+
+            while seq_num <= max_seq:
+                try:
+                    # Click 'Create' button
+                    page.wait_for_selector("//div[contains(@class, 'sm:block') and text()='Create']", timeout=5000)
+                    page.click("//div[contains(@class, 'sm:block') and text()='Create']")
+
+                    # Fill sequence input with seq_num
+                    page.wait_for_selector("//input[@type='number']", timeout=5000)
+                    seq_input = page.locator("//input[@type='number']")
+                    seq_input.click()
+                    seq_input.fill(str(seq_num))
+
+                    # Click 'Generate' button
+                    page.wait_for_selector("//button[contains(., 'Generate')]", timeout=5000)
+                    page.click("//button[contains(., 'Generate')]")
+
+                    time.sleep(5)  # Wait for generation to process
+
+                    # Extract generated email text element
+                    page.wait_for_selector("//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]", timeout=10000)
+                    email_element = page.locator("//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]").first
+                    email_address = email_element.inner_text().strip()
+
+                    # Append to output file
+                    with open('output.txt', 'a', encoding='utf-8') as f:
+                        f.write(email_address + '\n')
+
+                    print(f"Extracted email {email_address} saved for sequential number {seq_num}")
+
+                    # Delete generated items (trash buttons) loop
+                    while True:
+                        trash_buttons = page.locator("//button[contains(@class, 'bg-red-400') and contains(@class, 'rounded-full')]").all()
+                        if not trash_buttons:
+                            break
+                        trash_buttons[0].click()
+                        time.sleep(1)
+                        try:
+                            modal_delete_btn = page.wait_for_selector("//button[contains(@class, 'bg-red-500') and text()='Delete']", timeout=5000)
+                            modal_delete_btn.click()
+                            time.sleep(1)
+                        except PlaywrightTimeoutError:
+                            break
+
+                    seq_num += 1
+                except Exception as e:
+                    print(f"Error in iteration for seq_num {seq_num}: {e}")
+                    seq_num += 1
+
+        except Exception as e:
+            print(f"Error during Playwright automation: {e}")
+
+        browser.close()
+
+        # Send the output.txt file asynchronously in the bot's event loop
+        try:
+            with open('output.txt', 'rb') as f:
+                future = asyncio.run_coroutine_threadsafe(
+                    bot.send_document(chat_id=chat_id, document=f),
+                    loop
+                )
+                future.result()  # Wait for completion and raise exceptions if any
+        except Exception as e:
+            print(f"Failed to send output.txt automatically: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text('Please enter a server number (e.g., 1,2,3,4):', reply_markup=ForceReply(selective=True))
@@ -210,11 +200,12 @@ async def range_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return RANGE
     context.user_data['range_start'] = start
     context.user_data['range_end'] = end
-
     await update.message.reply_text(f'Starting generation on server {context.user_data["server_num"]} for range {start}-{end}.')
 
     loop = asyncio.get_event_loop()
-    threading.Thread(target=run_selenium, args=(context.user_data['server_num'], start, end, context.bot, update.effective_chat.id, loop)).start()
+    threading.Thread(target=run_playwright, args=(
+        context.user_data['server_num'], start, end,
+        context.bot, update.effective_chat.id, loop)).start()
 
     await update.message.reply_text('Running. You will receive the output.txt file here when done.')
     return ConversationHandler.END
@@ -237,5 +228,4 @@ conv_handler = ConversationHandler(
 )
 
 app.add_handler(conv_handler)
-
 app.run_polling()
