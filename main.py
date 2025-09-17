@@ -48,7 +48,7 @@ def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
 
             # Click login button
             try:
-                page.wait_for_selector('.button_primary_mod', timeout=5000)
+                page.wait_for_selector('.button_primary_mod', timeout=10000)
                 page.click('.button_primary_mod')
             except PlaywrightTimeoutError:
                 print("Login button not found or not clickable")
@@ -229,5 +229,6 @@ conv_handler = ConversationHandler(
 
 app.add_handler(conv_handler)
 app.run_polling()
+
 
 
