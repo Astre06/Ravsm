@@ -1,60 +1,32 @@
 import asyncio
-import os
+import threading
 from telegram import Update, ForceReply
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters,
     ContextTypes, ConversationHandler
 )
-import threading
 from playwright.async_api import async_playwright
 
 TOKEN = "8017025108:AAEN8QkEB66iJxAl3TtA89axtImXL5dETSs"
-CHAT_ID = 6679042143
 SERVER, RANGE = range(2)
 
 async def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
     output_file = 'output.txt'
-    # Clear previous content
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write('')
-
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # change to True for headless
+        browser = await p.chromium.launch(headless=True)  # Use headless for servers
         context = await browser.new_context()
         page = await context.new_page()
 
-        url = "https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F"
-        email = "oops-mud-handclasp@duck.com"
-        password = "Neljane143"
-
-        try:
-            await page.goto(url)
-        except Exception as e:
-            print(f"Failed to load URL: {e}")
-
-        try:
-            await page.fill('input[name="email"]', email)
-        except Exception as e:
-            print(f"Email input not found: {e}")
-
-        try:
-            await page.fill('input[name="password"]', password)
-            await page.press('input[name="password"]', 'Enter')
-        except Exception as e:
-            print(f"Password input error: {e}")
-
-        try:
-            await page.click('.button_primary_mod')
-        except Exception as e:
-            print(f"Login button error: {e}")
-
-        try:
-            await page.click("//button[contains(., 'Full Access')]")
-        except Exception as e:
-            print(f"Full Access button error: {e}")
+        await page.goto("https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F")
+        await page.fill('input[name="email"]', "oops-mud-handclasp@duck.com")
+        await page.fill('input[name="password"]', "Neljane143")
+        await page.press('input[name="password"]', 'Enter')
+        await page.click('.button_primary_mod')
+        await page.click("//button[contains(., 'Full Access')]")
 
         seq_num = 1
-
         try:
             await page.click("//div[contains(@class, 'sm:block') and text()='Create']")
             await page.click("//span[text()='Google']")
@@ -67,14 +39,10 @@ async def run_playwright(server_num, range_start, range_end, bot, chat_id, loop)
             await page.wait_for_timeout(10000)
             await page.click("//button[contains(., 'Generate')]")
             await page.wait_for_selector("//div[contains(text(), '@gmail.com')]")
-            print(f"Generated batch with sequential number {seq_num}")
         except Exception as e:
             print(f"Error during first generation: {e}")
 
-        seq_num = range_start
-        max_seq = range_end
-
-        while seq_num <= max_seq:
+        for seq_num in range(range_start, range_end + 1):
             try:
                 await page.click("//div[contains(@class, 'sm:block') and text()='Create']")
                 await page.fill("//input[@type='number']", str(seq_num))
@@ -85,75 +53,63 @@ async def run_playwright(server_num, range_start, range_end, bot, chat_id, loop)
                 email_address = await email_elem.inner_text()
                 with open(output_file, 'a', encoding='utf-8') as f:
                     f.write(email_address + '\n')
-                print(f"Extracted email {email_address} saved for sequential number {seq_num}")
-
                 while True:
-                    try:
-                        trash_buttons = await page.query_selector_all("//button[contains(@class, 'bg-red-400') and contains(@class, 'rounded-full')]")
-                        if not trash_buttons:
-                            break
-                        await trash_buttons[0].click()
-                        await page.wait_for_timeout(1000)
-                        modal_delete_btn = await page.wait_for_selector("//button[contains(@class, 'bg-red-500') and text()='Delete']")
-                        await modal_delete_btn.click()
-                        await page.wait_for_timeout(1000)
-                    except Exception:
+                    trash_buttons = await page.query_selector_all("//button[contains(@class, 'bg-red-400') and contains(@class, 'rounded-full')]")
+                    if not trash_buttons:
                         break
-
-                seq_num += 1
+                    await trash_buttons[0].click()
+                    await page.wait_for_timeout(1000)
+                    modal_delete_btn = await page.wait_for_selector("//button[contains(@class, 'bg-red-500') and text()='Delete']")
+                    await modal_delete_btn.click()
+                    await page.wait_for_timeout(1000)
+                print(f"Extracted email {email_address} saved for sequential number {seq_num}")
             except Exception as e:
                 print(f"Error in iteration for seq_num {seq_num}: {e}")
-                seq_num += 1
 
         await browser.close()
 
-    # Send the output.txt file asynchronously in the bot's event loop
     try:
         with open(output_file, 'rb') as f:
             future = asyncio.run_coroutine_threadsafe(
                 bot.send_document(chat_id=chat_id, document=f),
                 loop
             )
-            future.result()  # Wait for completion and raise exceptions if any
+            future.result()
     except Exception as e:
         print(f"Failed to send output.txt automatically: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text('Please enter a server number (e.g., 1,2,3,4):', reply_markup=ForceReply(selective=True))
+    await update.message.reply_text('Enter server number:', reply_markup=ForceReply(selective=True))
     return SERVER
 
 async def server_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    server_num = update.message.text.strip()
-    if not server_num.isdigit():
-        await update.message.reply_text('Please enter a valid server number.')
+    if not update.message.text.isdigit():
+        await update.message.reply_text('Invalid server number.')
         return SERVER
-    context.user_data['server_num'] = int(server_num)
-    await update.message.reply_text('Please input range (e.g., 1-890):', reply_markup=ForceReply(selective=True))
+    context.user_data['server_num'] = int(update.message.text)
+    await update.message.reply_text('Enter range (start-end):', reply_markup=ForceReply(selective=True))
     return RANGE
 
 async def range_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_range = update.message.text.strip()
-    if '-' not in user_range:
-        await update.message.reply_text('Please enter range in format start-end (e.g., 1-890).')
-        return RANGE
     parts = user_range.split('-')
     if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
-        await update.message.reply_text('Invalid range format. Use start-end (e.g., 1-890).')
+        await update.message.reply_text('Invalid range format.')
         return RANGE
     start, end = int(parts[0]), int(parts[1])
     if start > end:
-        await update.message.reply_text('Range start should be less than or equal to end.')
+        await update.message.reply_text('Start must be <= end.')
         return RANGE
     context.user_data['range_start'] = start
     context.user_data['range_end'] = end
-    await update.message.reply_text(f'Starting generation on server {context.user_data["server_num"]} for range {start}-{end}.')
+    await update.message.reply_text(f'Starting on server {context.user_data["server_num"]} range {start}-{end}.')
     loop = asyncio.get_event_loop()
     threading.Thread(target=asyncio.run, args=(run_playwright(context.user_data['server_num'], start, end, context.bot, update.effective_chat.id, loop),)).start()
-    await update.message.reply_text('Running. You will receive the output.txt file here when done.')
+    await update.message.reply_text('Running. Output will be sent here.')
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text('Operation cancelled.')
+    await update.message.reply_text('Cancelled.')
     return ConversationHandler.END
 
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler
@@ -170,5 +126,4 @@ conv_handler = ConversationHandler(
 )
 
 app.add_handler(conv_handler)
-
 app.run_polling()
