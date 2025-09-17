@@ -17,7 +17,7 @@ SERVER, RANGE = range(2)
 
 def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set to True for headless on VPS
+        browser = p.chromium.launch(headless=True)  # Set to True for headless on VPS
         context = browser.new_context()
         page = context.new_page()
         url = "https://my.sonjj.com/login?back=https%3A%2F%2Fsmailpro.com%2F"
@@ -206,3 +206,4 @@ conv_handler = ConversationHandler(
 
 app.add_handler(conv_handler)
 app.run_polling()
+
