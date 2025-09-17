@@ -55,7 +55,7 @@ def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
 
             # Click 'Full Access' button
             try:
-                page.wait_for_selector("//button[contains(., 'Full Access')]", timeout=10000)
+                page.wait_for_selector("//button[contains(., 'Full Access')]", timeout=500)
                 page.click("//button[contains(., 'Full Access')]")
             except PlaywrightTimeoutError:
                 print("Full Access button not found or not clickable")
@@ -127,7 +127,7 @@ def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
                     time.sleep(5)  # Wait for generation to process
 
                     # Extract generated email text element
-                    page.wait_for_selector("//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]", timeout=10000)
+                    page.wait_for_selector("//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]", timeout=500)
                     email_element = page.locator("//div[contains(@class, 'text-sm') and contains(@class, 'text-gray-500') and contains(@class, 'truncate')]").first
                     email_address = email_element.inner_text().strip()
 
