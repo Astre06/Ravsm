@@ -7,7 +7,6 @@ from telegram.ext import (
 )
 import threading
 import time
-from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -247,3 +246,4 @@ conv_handler = ConversationHandler(
 app.add_handler(conv_handler)
 
 app.run_polling()
+
