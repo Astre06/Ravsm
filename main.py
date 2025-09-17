@@ -15,7 +15,7 @@ SERVER, RANGE = range(2)
 
 def run_playwright(server_num, range_start, range_end, bot, chat_id, loop):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set to True for headless on VPS
+        browser = p.chromium.launch(headless=true)  # Set to True for headless on VPS
         context = browser.new_context()
         page = context.new_page()
 
@@ -229,3 +229,4 @@ conv_handler = ConversationHandler(
 
 app.add_handler(conv_handler)
 app.run_polling()
+
